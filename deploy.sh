@@ -3,8 +3,19 @@
 echo "Сборка docker образа"
 docker build -t journal-service:latest .
 
+echo "Установка Istio"
+istioctl install --set profile=demo -y
+
 echo "Загрузка образа в Minikube"
 minikube image load journal-service:latest
+
+echo "Включение istio-injection"
+kubectl label namespace journal-system istio-injection=enabled --overwrite
+
+echo "Установка Prometheus"
+kubectl apply -f k8s/prometheus-config.yaml
+kubectl apply -f k8s/prometheus-deployment.yaml
+kubectl apply -f k8s/prometheus-services.yaml
 
 echo "Создание конфигурации"
 kubectl apply -f k8s/configuration.yaml
@@ -37,6 +48,9 @@ kubectl apply -f k8s/daemonset-collector.yaml
 echo "Настройка периодического архивирования"
 kubectl apply -f k8s/cronjob.yaml
 
-echo "Развертывание успешно завершено!"
+echo "Использование Istio"
+kubectl apply -f k8s/gateway.yaml
+kubectl apply -f k8s/virtual-service.yaml
+kubectl apply -f k8s/destination-rule.yaml
 
-
+echo "Развертывание приложения успешно завершено!"
