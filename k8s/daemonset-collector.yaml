@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: journal-collector
+  labels:
+    app: journal-system
+    component: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: journal-system
+      component: collector
+  template:
+    metadata:
+      labels:
+        app: journal-system
+        component: collector
+    spec:
+      containers:
+        - name: log-collector
+          image: alpine:3.16
+          volumeMounts:
+            - name: logs-volume
+              mountPath: /data/logs
+          command:
+            - sh
+            - -exc
+            - |
+              apk add --no-cache curl
+
+              TARGET_DIR=/data/logs
+              LOG_FILE="$TARGET_DIR/journals.log"
+              mkdir -p "$TARGET_DIR"
+
+              while true; do
+                NOW=$(date +%F-%T)
+                echo "[$NOW] Получение логов с journal-service..."
+                curl -s http://journal-service/logs > "$LOG_FILE"
+                echo "[$NOW] Логи собраны:"
+                cat "$LOG_FILE"
+                echo "-------------------------"
+                sleep 60
+              done
+      volumes:
+        - name: logs-volume
+          emptyDir: {}
